@@ -1,6 +1,6 @@
 from RealtimeSTT import AudioToTextRecorder
 import time
-from main import ResponseGenerator
+from api import ResponseGenerator
 
 # Threshold for silence in seconds
 SILENCE_THRESHOLD = 3
