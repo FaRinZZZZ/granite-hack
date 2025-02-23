@@ -1,6 +1,6 @@
 from RealtimeSTT import AudioToTextRecorder
 import time
-from testv2 import GraniteAssistant
+from advanceRAG_api import GraniteAssistant
 from RealtimeTTS import TextToAudioStream, PiperEngine, PiperVoice
 
 # Threshold for silence in seconds
@@ -11,12 +11,12 @@ assistant = GraniteAssistant(file_path)
 
 # Configure Piper TTS Engine
 voice = PiperVoice(
-    model_file="D:/WORK/Compettition/GRANITE HACKATHON/granite/piper/en_GB-southern_english_female-low.onnx",
-    config_file="D:/WORK/Compettition/GRANITE HACKATHON/granite/piper/en_GB-southern_english_female-low.onnx.json",
+    model_file="piper\en_GB-southern_english_female-low.onnx",
+    config_file="piper\en_GB-southern_english_female-low.onnx.json",
 )
 
 engine = PiperEngine(
-    piper_path="D:/WORK/Compettition/GRANITE HACKATHON/granite/piper/piper.exe",  # Direct path to piper.exe
+    piper_path="piper\piper.exe",  # Direct path to piper.exe
     voice=voice,
 )
 
