@@ -21,7 +21,7 @@ The project is organized as follows:
 /Granite-chan
     /data                     # Contains the PDF files with supercenter details
     /piper                     # Contains the Piper TTS model and config files
-    /requirements.txt          # Python dependencies required for the project
+    requirements.txt          # Python dependencies required for the project
     advanceRAG_api.py          # The core API logic for response generation using RAG
     main.py                    # Main file to run the application and test Granite-chan
     demo_video.mp4             # Demo video showcasing the robot and AI chatbot in action
@@ -100,18 +100,6 @@ Because of the **Piper TTS** engine and its access to system resources, it’s r
    - Process the speech-to-text output.
    - Generate **Granite-chan's response** and speak it aloud via **Piper TTS**.
    - The **destination** (store zone) will also be displayed in the terminal.
-
-### **2.2 Running the Demo**
-
-If you'd like to **show the demo video** (for a **presentation or showcase**):
-
-1. Navigate to the **demo video file**:
-
-   ```bash
-   data/demo_video.mp4
-   ```
-
-2. Open it in your preferred **video player** to showcase the functionality of **Granite-chan** in the **supercenter**.
 
 ---
 
