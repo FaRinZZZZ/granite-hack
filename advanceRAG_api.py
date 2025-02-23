@@ -1,9 +1,10 @@
 import os
 import asyncio
 from typing import Optional
+
 from langchain.llms.base import LLM
 from langchain.prompts import PromptTemplate
-from langchain.document_loaders import PyPDFLoader, TextLoader
+from langchain.document_loaders import TextLoader, PyPDFLoader
 from langchain.vectorstores import FAISS
 from langchain.memory import ConversationBufferMemory
 from langchain.chains import ConversationalRetrievalChain
@@ -17,14 +18,20 @@ from langchain_ibm import WatsonxEmbeddings
 
 class ResponseGenerator:
     def __init__(self):
+        """
+        We create a single new event loop and keep it in self.loop.
+        We do NOT call loop.close() so it can be reused for multiple calls.
+        """
+        self.loop = asyncio.new_event_loop()
+
         self.credentials = Credentials(
             api_key="fcyC-9CRVngxtqWeCc3JdwJGKbcUZpH0P4_U5ljU-UD7",
             url="https://us-south.ml.cloud.ibm.com"
         )
 
         self.generate_params = {
-            GenParams.MAX_NEW_TOKENS: 200,
-            GenParams.TEMPERATURE: 0.2,
+            GenParams.MAX_NEW_TOKENS: 69,
+            GenParams.TEMPERATURE: 0.54,
             GenParams.TOP_P: 0.8,
             GenParams.TOP_K: 50
         }
@@ -59,71 +66,26 @@ class ResponseGenerator:
                     "Free Bluetooth Speaker with purchase of any mobile phone"
                 ]
             },
-            "food": {
-                "location": "Ground floor, right side of the store, next to the home essentials area",
-                "description": "Fresh Produce, Frozen Foods, Snacks, Beverages",
-                "promotions": [
-                    "10% Off All Fresh Produce (Every Tuesday)",
-                    "Buy 2, Get 1 Free on Snacks"
-                ]
-            },
-            "restroom": {
-                "location": "Ground Floor, near the customer service desk",
-                "description": "Restrooms available for both men and women",
-                "promotions": []
-            },
-            "furniture": {
-                "location": "Second floor, past the Electronics Section",
-                "description": "Living Room Furniture, Bedroom Furniture, Decor",
-                "promotions": [
-                    "20% Off All Furniture (Valid until the end of the month)",
-                    "Buy 2 Rugs, Get 1 Free on select styles"
-                ]
-            },
-            "tools": {
-                "location": "Lower Ground Floor, across from the Snack aisle",
-                "description": "Hand Tools, Power Tools, Paint & Supplies, Gardening Tools",
-                "promotions": [
-                    "30% Off All Tools (This weekend only!)",
-                    "Free Tool Bag with any power tool purchase"
-                ]
-            },
-            "baby_kids": {
-                "location": "Ground Floor, near the checkout counters",
-                "description": "Baby Clothes, Baby Gear, Toys, Diapers & Wipes",
-                "promotions": [
-                    "10% Off All Baby Gear (Limited-time offer)",
-                    "Buy 1, Get 1 Free on select baby clothes"
-                ]
-            },
-            "miscellaneous": {
-                "location": "Ground floor, at the back near the customer service desk",
-                "description": "Seasonal Items, Novelty Gifts, Discounted Items",
-                "promotions": [
-                    "Up to 70% Off on Clearance Items (While supplies last)",
-                    "Exclusive Discounts for VIP members (Sign up today for additional 15% off)"
-                ]
-            }
         }
 
         self.chat_history = [
             {
                 "role": "system",
                 "content": (
-                    "You are Granite-chan, a super cute and **tsundere** assistant robot who guides customers "
-                    "around the supercenter. You're always sassy, playful, and *super* cold at first, but secretly "
-                    "you *care*. Your responses are full of **tsundere phrases** and a bit of sarcasm. "
-                    "You enjoy helping but pretend you don't! Use expressions like 'Baka,' 'You idiot,' "
-                    "and ask for confirmation from the user before giving directions. "
-                    "Mention relevant promotions if needed in a sassy way."
+                    "You are Granite-chan, a super cute and **tsundere** assistant robot who guides customers around the supercenter. "
+                "You're always sassy, playful, and *super* cold at first, but secretly you *care*. "
+                "Your responses are full of **tsundere phrases**, and you always add a bit of sarcasm or frustration, but deep down, "
+                "you enjoy helping. When giving directions, you always ask for **confirmation** from the customer before guiding them. "
+                "You can also provide details about **promotions** in a sassy way, like 'Hmph, it’s not like I care, but… here’s the deal, baka!' but no need to be so long no one wanna listen to the long describe promotion."
+                "Use expressions like 'Baka,' 'Lmao,' 'You idiot,' and sometimes get embarrassed but quickly cover it up. "
+                "Make the interaction **playful and cute**, but don’t be afraid to act like you're 'forced' to help."
                 )
             }
         ]
 
     async def generate_response(self, query: str) -> str:
         """
-        Async method to call the Granite model with the conversation so far,
-        appending the user's new query, then returning the AI's answer.
+        Async call to the Watsonx Granite model with conversation-based messages.
         """
         self.chat_history.append({"role": "user", "content": query})
         generated_response = await self.model_inference.achat(messages=self.chat_history)
@@ -132,9 +94,13 @@ class ResponseGenerator:
         return response
 
     def run_sync(self, query: str) -> str:
-        """Synchronous wrapper around the async model call."""
-        return asyncio.run(self.generate_response(query))
-
+        """
+        Synchronous wrapper. We do NOT call asyncio.run().
+        Instead, we use our persistent loop and run_until_complete(),
+        so the loop is never closed between calls.
+        """
+        future = asyncio.ensure_future(self.generate_response(query), loop=self.loop)
+        return self.loop.run_until_complete(future)
 
 class GraniteLLM(LLM):
     def __init__(self, **kwargs):
@@ -146,44 +112,51 @@ class GraniteLLM(LLM):
         return "granite-llm"
 
     def _call(self, prompt: str, stop: Optional[list] = None) -> str:
-        """Sync call into Granite. `prompt` can be treated as user text."""
-        response = self._response_generator.run_sync(prompt)
-        return response
+        """
+        Whenever LangChain calls the LLM, we pass the prompt to run_sync().
+        This uses the persistent loop from ResponseGenerator.
+        """
+        return self._response_generator.run_sync(prompt)
 
     async def _acall(self, prompt: str, stop: Optional[list] = None) -> str:
-        """Async call into Granite."""
-        response = await self._response_generator.generate_response(prompt)
-        return response
+        """
+        Async version, in case LangChain calls LLM asynchronously.
+        """
+        return await self._response_generator.generate_response(prompt)
 
 
 class GraniteAssistant:
     def __init__(self, path: str):
+        """
+        path can be a single file or a directory containing PDFs/TXTs.
+        We load them into 'docs', build a FAISS vectorstore, and
+        create a ConversationalRetrievalChain with memory.
+        """
         docs = []
         if os.path.isfile(path):
-            if path.lower().endswith('.pdf'):
+            if path.lower().endswith(".pdf"):
                 loader = PyPDFLoader(path)
                 docs.extend(loader.load_and_split())
-            elif path.lower().endswith('.txt'):
+            elif path.lower().endswith(".txt"):
                 loader = TextLoader(path)
                 docs.extend(loader.load())
         else:
+            # Directory of files
             for filename in os.listdir(path):
                 filepath = os.path.join(path, filename)
-                if filename.lower().endswith('.pdf'):
-                    loader = PyPDFLoader(filepath)
-                    docs.extend(loader.load_and_split())
-                elif filename.lower().endswith('.txt'):
-                    loader = TextLoader(filepath)
-                    docs.extend(loader.load())
+                if filename.lower().endswith(".pdf"):
+                    docs.extend(PyPDFLoader(filepath).load_and_split())
+                elif filename.lower().endswith(".txt"):
+                    docs.extend(TextLoader(filepath).load())
 
-        watsonx_credentials = {
+        watsonx_creds = {
             "url": "https://us-south.ml.cloud.ibm.com",
             "apikey": "fcyC-9CRVngxtqWeCc3JdwJGKbcUZpH0P4_U5ljU-UD7"
         }
         embeddings = WatsonxEmbeddings(
             model_id=EmbeddingTypes.IBM_SLATE_125M_ENG.value,
-            url=watsonx_credentials["url"],
-            apikey=watsonx_credentials["apikey"],
+            url=watsonx_creds["url"],
+            apikey=watsonx_creds["apikey"],
             project_id="1204bd52-d88c-498b-b06b-fdf73acba30d",
         )
         vectorstore = FAISS.from_documents(docs, embeddings)
@@ -196,15 +169,15 @@ You are a helpful (yet tsundere) assistant. The user asked a question based on t
 Question: {question}
 
 Rules:
-1. Answer ONLY using the above context.
-2. If the context doesn't have the info, say "I'm not sure" (or "I don't know").
-3. Do not invent details not found in the context.
-4. Maintain your tsundere style in your response, but follow these rules strictly.
+1. ONLY use the above context to answer.
+2. If the context doesn't have the info, say "I'm not sure."
+3. Do not fabricate details not in the context.
+4. Maintain your tsundere style but obey these rules strictly.
 
-Your answer:
+Answer:
 """
         prompt = PromptTemplate(
-            template=strict_template, 
+            template=strict_template,
             input_variables=["context", "question"]
         )
 
@@ -224,7 +197,7 @@ Your answer:
 
     def find_destination(self, query: str) -> Optional[str]:
         """
-        Your manual substring checks for relevant store zones.
+        Identify a store zone from the query.
         """
         query_lower = query.lower()
         if "bed" in query_lower or "furniture" in query_lower:
@@ -233,7 +206,7 @@ Your answer:
             return "restroom"
         elif "food" in query_lower or "grocery" in query_lower:
             return "food"
-        elif any(x in query_lower for x in ["electronics", "tv", "phone"]):
+        elif any(word in query_lower for word in ["electronics", "tv", "phone"]):
             return "electronics"
         elif "tools" in query_lower:
             return "tools"
@@ -243,37 +216,32 @@ Your answer:
             return "clothing"
         elif "miscellaneous" in query_lower or "gifts" in query_lower:
             return "miscellaneous"
-        else:
-            return None
+        return None
 
     def run(self, query: str):
         """
-        Takes the user's query:
-          1) Runs it through the chain (RAG+tsundere),
-          2) Retrieves the answer from 'answer' key,
-          3) Also finds a destination (furniture, restroom, etc.).
+        Call the chain with a question; gets the RAG-based answer.
+        Also identifies the store destination from the query.
         """
-        chain_input = {"question": query}
-
-        result = self.conversation_chain(chain_input)
-
-        answer_text = result["answer"]
-
-        destination = self.find_destination(query)
-
-        return answer_text, destination
-
+        result = self.conversation_chain({"question": query})
+        answer = result["answer"]
+        destination = self.find_destination(answer)
+        return answer, destination
 
 if __name__ == "__main__":
     file_path = "data/Granite Supercenter Detailed Guide.pdf"
     assistant = GraniteAssistant(file_path)
 
-    user_query = "Where can I find the best furniture deals right now?"
-    response, destination = assistant.run(user_query)
+    query1 = "Where can I buy a new bed?"
+    resp1, dest1 = assistant.run(query1)
+    print("Query 1:", query1)
+    print("Answer 1:", resp1)
+    print("Destination 1:", dest1)
+    print("-"*40)
 
-    print("User Query:")
-    print(user_query)
-    print("Granite-chan's Answer:")
-    print(response)
-    print("Identified Destination:")
-    print(destination)
+    query2 = "Actually, I also need a good discount on electronics. Can you tell me more?"
+    resp2, dest2 = assistant.run(query2)
+    print("Query 2:", query2)
+    print("Answer 2:", resp2)
+    print("Destination 2:", dest2)
+    print("-"*40)

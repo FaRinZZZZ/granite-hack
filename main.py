@@ -1,10 +1,13 @@
 from RealtimeSTT import AudioToTextRecorder
 import time
-from advanceRAG_api import ResponseGenerator
+from advanceRAG_api import GraniteAssistant
 from RealtimeTTS import TextToAudioStream, PiperEngine, PiperVoice
 
 # Threshold for silence in seconds
 SILENCE_THRESHOLD = 4  # Can set to 3.5 or adjust as needed
+
+file_path = "data/Granite Supercenter Detailed Guide.pdf"
+assistant = GraniteAssistant(file_path)
 
 # Configure Piper TTS Engine
 voice = PiperVoice(
@@ -29,8 +32,8 @@ def speak_text(text):
 def process_text(text):
     """Process user input, get Granite-chan's response, and play only her reply."""
     if text.strip():  # Ensure text is not empty
-        generator = ResponseGenerator()
-        result, destination = generator.run(text)
+        # generator = ResponseGenerator()
+        result, destination = assistant.run(text)
 
         # Print the format as requested
         print(f"User: {text}")
@@ -55,8 +58,8 @@ if __name__ == '__main__':
 
         elif time.time() - last_speech_time >= SILENCE_THRESHOLD:
             print("Silence detected. Generating response...")
-            generator = ResponseGenerator()
-            result, destination = generator.run("No input detected, responding to silence.")
+            # generator = ResponseGenerator()
+            result, destination = assistant.run("No input detected, responding to silence.")
 
             # Print and speak Granite-chan's response
             print("User: No input detected.")
