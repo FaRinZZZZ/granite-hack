@@ -1,6 +1,6 @@
 from RealtimeSTT import AudioToTextRecorder
 import time
-from api import ResponseGenerator
+from advanceRAG_api import ResponseGenerator
 from RealtimeTTS import TextToAudioStream, PiperEngine, PiperVoice
 
 # Threshold for silence in seconds
