@@ -3,13 +3,16 @@ import time
 from api import ResponseGenerator
 
 # Threshold for silence in seconds
-SILENCE_THRESHOLD = 3
+SILENCE_THRESHOLD = 4  # Can set to 3.5 or adjust as needed
 
 def process_text(text):
     if text.strip():  # Ensure text is not empty
         generator = ResponseGenerator()
-        result = generator.run(text)
-        print(f"Generated response: {result}")
+        result, destination = generator.run(text)
+        # Print the format as requested: "User: xxx", "Granite-Chan: xxx", "Destination: xxx"
+        print(f"User: {text}")
+        print(f"Granite-chan: {result}")
+        print(f"Destination: {destination if destination else 'None'}")
 
 if __name__ == '__main__':
     recorder = AudioToTextRecorder(language='en')
@@ -26,6 +29,9 @@ if __name__ == '__main__':
         elif time.time() - last_speech_time >= SILENCE_THRESHOLD:
             print("Silence detected. Generating response...")
             generator = ResponseGenerator()
-            result = generator.run("No input detected, responding to silence.")
-            print(f"Generated response: {result}")
+            result, destination = generator.run("No input detected, responding to silence.")
+            # Print the format for the silence response
+            print("User: No input detected.")
+            print(f"Granite-chan: {result}")
+            print(f"Destination: {destination if destination else 'None'}")
             last_speech_time = time.time()  # Reset timer after generating response
