@@ -1,0 +1,14 @@
+.env
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+
+# Generated FAISS index + chunk store
+storage/
+
+# HF model cache if HF_HOME is pointed here
+models/
+*.wav
+*.mp3
+.DS_Store

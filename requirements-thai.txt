@@ -1,0 +1,34 @@
+# Thai voice RAG stack. Install into a fresh venv — do NOT mix with the old
+# requirements.txt, which pins a deprecated LangChain and a Windows-only Piper.
+
+# --- API ---
+fastapi>=0.115
+uvicorn[standard]>=0.32
+python-multipart>=0.0.18
+pydantic>=2.9
+python-dotenv>=1.0
+
+# --- LLM (OpenTyphoon is OpenAI-wire-compatible) ---
+openai>=1.60
+
+# --- STT: Typhoon Whisper Turbo ---
+torch>=2.4
+transformers>=4.56   # 4.56 renamed torch_dtype -> dtype; app/stt.py uses the new name
+accelerate>=1.0
+
+# --- Embeddings + vector search ---
+sentence-transformers>=3.2
+faiss-cpu>=1.9
+numpy>=1.26
+
+# --- Audio + documents ---
+soundfile>=0.12
+pymupdf>=1.24
+pypdf>=5.1
+
+# --- TTS ---
+edge-tts>=7.0
+
+# --- Optional: faster CPU inference. Needs a CTranslate2-converted model,
+#     see the docstring in app/stt.py. Then set STT_BACKEND=faster-whisper
+# faster-whisper>=1.1
